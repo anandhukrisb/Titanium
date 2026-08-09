@@ -19,7 +19,7 @@ puts:
 	or al, al	;is the next character null?
 	jz .done
 
-	mov ah, 0x0e	;bios interrupt called
+	mov ah, 0x0e	;bios interrupt called(teletype ouput function selected)
 	mov bh, 0
 	int 0x10
 	
