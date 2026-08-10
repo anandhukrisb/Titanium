@@ -38,6 +38,8 @@ ebr_system_id:                  db 'FAT12   '        ; 8 bytes
 ;	code goes here
 ;
 
+; gonna learn some disk layout
+
 
 
 start:
