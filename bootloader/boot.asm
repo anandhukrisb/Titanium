@@ -38,8 +38,6 @@ ebr_system_id:                  db 'FAT12   '        ; 8 bytes
 ;	code goes here
 ;
 
-; gonna learn some disk layout
-
 
 
 start:
@@ -88,6 +86,40 @@ main:
 
 .halt:
 	jmp .halt
+
+
+;
+;	Disk Routines
+;
+
+;
+;	Converts an LBS address to CHS address
+;	Parameters:
+;		- ax: LBA Address
+;	Returns:
+;		- cx [bits 0-5]: sector number
+;		- cx [bits 6-15]: cylinder
+;		- dh: head
+;
+
+lbs_to_chs:
+
+	xor dx, dx							; effienctly making value in dx to zero
+	div word [bdb_sectors_per_track]	; ax = LBS / sectors_per_track
+										; dx = LBS % sectors_per_track
+
+	inc dx								; incrementing value in dx
+	mov cx, dx							; sector number
+
+	xor dx, dx
+	div word [bdb_heads]				; ax = ( LBS / sectors_per_track ) / head = cylinder
+										; dx = ( LBS / sectors_per_track ) % head = head
+	mov dh, dl							; dh = head
+	mov ch, al
+	shl ah, 6
+	or cl, ah
+
+
 
 msg_hello: db 'Hello World!', ENDL, 0
 
