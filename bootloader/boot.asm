@@ -78,14 +78,41 @@ main:
 	mov ss, ax
 	mov sp,0X7C00
 
+	; read something from the floppy disk
+	; BIOS should set DL to drive number
+
+	mov [ebr_drive_number], dl
+
+	mov ax, 1							; LBA = 1, second sector from the disk
+	mov cl, 1							; 1 sector to read
+	mov bx, 0x7E00						; Data should be after the bootloader
+	call disk_read
+
 	;prints the message
 	mov si, msg_hello
 	call puts
 
 	hlt
 
+;
+;	Error handlers
+;
+
+floppy_error:
+	mov si, msg_read_failed
+	call puts
+
+	jmp wait_key_and_reboot
+	hlt
+
+wait_key_and_reboot:
+	mov ah, 0
+	int 16h
+	jmp 0FFFFH:0						; Jumping to the beggining of the BIOS, should reboot
+
 .halt:
-	jmp .halt
+	cli
+	hlt									; Disabling the interrupts, this way CPU can get out of the halt state
 
 
 ;
@@ -104,6 +131,9 @@ main:
 
 lbs_to_chs:
 
+	push ax
+	push dx
+
 	xor dx, dx							; effienctly making value in dx to zero
 	div word [bdb_sectors_per_track]	; ax = LBS / sectors_per_track
 										; dx = LBS % sectors_per_track
@@ -119,9 +149,79 @@ lbs_to_chs:
 	shl ah, 6
 	or cl, ah
 
+	pop ax
+	mov dl, al							; restore DL
+	pop ax
+	ret
+
+;
+;	Reads sectors from a disk
+;	Parameters
+;		- ax: LBA address
+;		- cl: Number of sectors to read
+;		- dl: Drive number
+;		- es:bx: memory address where to store data
+
+disk_read:
+
+	push ax
+	push bx
+	push cx
+	push dx
+	push di
+
+	push cx								; Temporarily store cx (number of sectors to read)
+	call lbs_to_chs						; Compute CHS
+	pop ax								; AL = number of sectors to read
+
+	mov ah, 02h
+	mov di, 3							; Retry count
+
+.retry:
+	pusha								; saving all registers
+	stc									; set carry flag, some BIOS'es dont set it
+	int 13h
+	jnc .done
+
+	;read failed
+	popa
+	call disk_reset
+
+	dec di
+	test di, di
+	jnz .retry
+
+.fail:
+	jmp floppy_error
+
+.done:
+	push di
+	push dx
+	push cx
+	push bx
+	push ax
+
+	ret
+
+;
+; Reset Disk controller
+; Parameters:
+;	dl: drive number
+
+disk_reset:
+	pusha
+
+	mov ah, 0
+	stc
+	int 13h
+	jc floppy_error
+	popa
+	ret
 
 
-msg_hello: db 'Hello World!', ENDL, 0
+
+msg_hello: 					db 'Hello World!', ENDL, 0
+msg_read_failed:			db 'Read from disk failed!', ENDL, 0
 
 times 510-($-$$) db 0
 
