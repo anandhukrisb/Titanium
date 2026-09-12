@@ -20,7 +20,7 @@ bdb_media_descriptor_type:      db 0F0H             ; 3.5" floppy disc
 bdb_sectors_per_fat:            dw 9                ; 9 sectors/fat
 bdb_sectors_per_track:          dw 18
 bdb_heads:                      dw 2
-bdb_hidded_sectors:             dd 0
+bdb_hidden_sectors:             dd 0
 bdb_large_sector_count:         dd 0
 
 
